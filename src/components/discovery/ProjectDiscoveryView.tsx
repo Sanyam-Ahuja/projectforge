@@ -1,371 +1,112 @@
 import React, { useState } from 'react';
 import { useProjectForgeStore } from '../../store/useProjectForgeStore';
-import { ProjectDomain, ProjectStatus } from '../../types';
-import { 
-  Plus, 
-  Star, 
-  GitFork, 
-  Users, 
-  ArrowRight, 
-  CheckCircle2, 
-  AlertCircle,
-  ExternalLink,
-  Flame,
-  Kanban,
-  Target
-} from 'lucide-react';
+import { ProjectDomain } from '../../types';
+import { Avatar, Head } from '../ui';
+import { GitFork, Plus, Star, X } from 'lucide-react';
 
-const DOMAINS: (ProjectDomain | 'all')[] = [
-  'all',
-  'Systems & Compilers',
-  'AI/ML',
-  'Robotics & IoT',
-  'Cybersecurity',
-  'Distributed Systems',
-];
+const DOMAINS: (ProjectDomain | 'all')[] = ['all', 'Systems & Compilers', 'AI/ML', 'Robotics & IoT', 'Cybersecurity', 'Distributed Systems'];
+const STATUS: Record<string, string> = { recruiting: 'Recruiting', in_development: 'Building', review: 'In review', launched: 'Shipped' };
 
 export const ProjectDiscoveryView: React.FC = () => {
-  const { 
-    projects, 
-    students, 
-    filterDomain, 
-    setFilterDomain, 
-    setSelectedProjectId, 
-    setActiveTab,
-    createProject 
-  } = useProjectForgeStore();
+  const { projects, students, filterDomain, setFilterDomain, setSelectedProjectId, setSelectedRoleId, setActiveTab, createProject } = useProjectForgeStore();
+  const [proposing, setProposing] = useState(false);
+  const [f, setF] = useState({ title: '', tagline: '', domain: 'Systems & Compilers' as ProjectDomain, role: '', skills: 'Rust:4, Linux Kernel:3' });
+  const list = projects.filter((p) => filterDomain === 'all' || p.domain === filterDomain);
 
-  const [showCreateModal, setShowCreateModal] = useState(false);
-  const [newTitle, setNewTitle] = useState('');
-  const [newTagline, setNewTagline] = useState('');
-  const [newDesc, setNewDesc] = useState('');
-  const [newDomain, setNewDomain] = useState<ProjectDomain>('Systems & Compilers');
-  const [newRepo, setNewRepo] = useState('');
-  const [newRoleTitle, setNewRoleTitle] = useState('');
-  const [newRoleSkills, setNewRoleSkills] = useState('Rust:4, Linux Kernel:3');
+  const draft = (pid: string, rid?: string) => { setSelectedProjectId(pid); if (rid) setSelectedRoleId(rid); setActiveTab('matching'); };
 
-  const filteredProjects = projects.filter((p) => {
-    if (filterDomain === 'all') return true;
-    return p.domain === filterDomain;
-  });
-
-  const handleCreateProject = (e: React.FormEvent) => {
+  const submit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newTitle || !newTagline) return;
-
-    // Parse skills format: "Skill:Level, Skill2:Level"
-    const reqSkills = newRoleSkills.split(',').map((item) => {
-      const [skill, levelStr] = item.split(':').map((s) => s.trim());
-      return {
-        skill: skill || 'General',
-        minLevel: levelStr ? parseInt(levelStr, 10) : 3,
-      };
-    });
-
+    if (!f.title.trim() || !f.tagline.trim()) return;
+    const req = f.skills.split(',').map((it) => { const [skill, lvl] = it.split(':').map((s) => s.trim()); return { skill: skill || 'General', minLevel: Math.min(5, Math.max(1, parseInt(lvl, 10) || 3)) }; });
     createProject({
-      title: newTitle.trim(),
-      tagline: newTagline.trim(),
-      description: newDesc.trim() || newTagline.trim(),
-      domain: newDomain,
-      status: 'recruiting',
-      leadStudentId: students[0]?.id || 'stu-1',
-      members: [students[0]?.id || 'stu-1'],
-      repoUrl: newRepo.trim() || `https://github.com/campus-labs/${newTitle.toLowerCase().replace(/\s+/g, '-')}`,
-      openRoles: [
-        {
-          id: `role-${Date.now()}`,
-          title: newRoleTitle.trim() || 'Core Engineer',
-          requiredSkills: reqSkills,
-          filledByStudentId: null,
-          status: 'open',
-        },
-      ],
+      title: f.title.trim(), tagline: f.tagline.trim(), description: f.tagline.trim(), domain: f.domain, status: 'recruiting',
+      leadStudentId: students[0]?.id || 'stu-1', members: [students[0]?.id || 'stu-1'],
+      repoUrl: `https://github.com/campus-labs/${f.title.toLowerCase().replace(/\s+/g, '-')}`,
+      openRoles: [{ id: `role-${Date.now()}`, title: f.role.trim() || 'Core engineer', requiredSkills: req, filledByStudentId: null, status: 'open' }],
     });
-
-    setShowCreateModal(false);
-    setNewTitle('');
-    setNewTagline('');
-    setNewDesc('');
+    setProposing(false);
+    setF({ ...f, title: '', tagline: '', role: '' });
   };
 
   return (
-    <div className="space-y-6">
-      {/* Hero Banner */}
-      <div className="bg-[#14171D] border border-[#232933] rounded-2xl p-6 shadow-xl relative overflow-hidden">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div>
-            <div className="flex items-center space-x-2">
-              <span className="text-xs font-mono px-2 py-0.5 rounded bg-amber-500/10 text-amber-400 border border-amber-500/20 font-semibold uppercase">
-                Active Incubator
-              </span>
-              <span className="text-xs text-slate-500 font-mono">
-                {projects.length} Technical Initiatives
-              </span>
-            </div>
-            <h2 className="text-xl font-bold text-white mt-2">Campus Engineering Project Hub</h2>
-            <p className="text-sm text-slate-400 max-w-2xl mt-1">
-              Discover student-led open source systems, robotics payloads, edge ML models, and security tooling. Recruit candidates through multi-objective skill alignment.
-            </p>
-          </div>
+    <div>
+      <Head title={<>Pick a team.<br /><span className="text-volt">Fill the empty seats.</span></>}
+        sub="Student-led projects looking for people. Every dashed circle is an open role. Tap it to see who fits best."
+        right={<button className="vbtn" onClick={() => setProposing(!proposing)}>{proposing ? <><X size={16} /> Close</> : <><Plus size={16} /> Start a team</>}</button>} />
 
-          <button
-            onClick={() => setShowCreateModal(true)}
-            className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-500 hover:to-orange-500 text-white font-medium text-xs shadow-lg shadow-amber-600/20 flex items-center space-x-1.5 self-start md:self-auto transition-all"
-          >
-            <Plus className="w-4 h-4" />
-            <span>Propose Initiative</span>
-          </button>
-        </div>
-      </div>
+      {proposing && (
+        <form onSubmit={submit} className="panel p-5 md:p-6 mb-8 grid md:grid-cols-2 gap-4">
+          <label className="block"><span className="lbl">Project name</span><input className="inp mt-1" value={f.title} onChange={(e) => setF({ ...f, title: e.target.value })} placeholder="HyperLogLog engine in Rust" required /></label>
+          <label className="block"><span className="lbl">One-line pitch</span><input className="inp mt-1" value={f.tagline} onChange={(e) => setF({ ...f, tagline: e.target.value })} placeholder="Cardinality estimates for streaming logs" required /></label>
+          <label className="block"><span className="lbl">Domain</span>
+            <select className="inp mt-1" value={f.domain} onChange={(e) => setF({ ...f, domain: e.target.value as ProjectDomain })}>{DOMAINS.slice(1).map((d) => <option key={d}>{d}</option>)}</select>
+          </label>
+          <label className="block"><span className="lbl">First open role</span><input className="inp mt-1" value={f.role} onChange={(e) => setF({ ...f, role: e.target.value })} placeholder="SIMD Rust developer" /></label>
+          <label className="block md:col-span-2"><span className="lbl">Skills it needs · skill:level, comma separated</span><input className="inp mt-1" value={f.skills} onChange={(e) => setF({ ...f, skills: e.target.value })} /></label>
+          <div className="md:col-span-2 flex justify-end"><button className="vbtn">Publish team</button></div>
+        </form>
+      )}
 
-      {/* Domain Filter Bar */}
-      <div className="flex items-center space-x-1 overflow-x-auto pb-1 text-xs">
-        {DOMAINS.map((domain) => (
-          <button
-            key={domain}
-            onClick={() => setFilterDomain(domain)}
-            className={`px-3.5 py-1.5 rounded-xl capitalize font-medium whitespace-nowrap transition-all ${
-              filterDomain === domain
-                ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40'
-                : 'bg-[#14171D] text-slate-400 border border-[#232933] hover:text-white hover:border-slate-700'
-            }`}
-          >
-            {domain}
+      <div className="flex gap-2 overflow-x-auto pb-2 mb-6">
+        {DOMAINS.map((d) => (
+          <button key={d} onClick={() => setFilterDomain(d)} aria-pressed={filterDomain === d}
+            className={`px-4 py-1.5 rounded-full font-semibold whitespace-nowrap border-2 ${filterDomain === d ? 'bg-white text-royal-ink border-white' : 'border-white/25 text-mist hover:border-white/60'}`}>
+            {d === 'all' ? 'Everything' : d}
           </button>
         ))}
       </div>
 
-      {/* Project Cards Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-        {filteredProjects.map((project) => {
-          const leadStudent = students.find((s) => s.id === project.leadStudentId);
-          const openRoles = project.openRoles.filter((r) => r.status === 'open');
-
+      {list.length === 0 && <p className="text-mist py-16 text-center text-[17px]">No teams in this domain yet. Start one.</p>}
+      <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-5">
+        {list.map((p) => {
+          const open = p.openRoles.filter((r) => r.status === 'open');
           return (
-            <div
-              key={project.id}
-              className="bg-[#14171D] border border-[#232933] rounded-2xl p-5 hover:border-[#374151] transition-all flex flex-col justify-between shadow-lg group"
-            >
-              <div>
-                {/* Domain & Status */}
-                <div className="flex items-center justify-between">
-                  <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-slate-800 text-slate-300 border border-slate-700/60 uppercase font-semibold">
-                    {project.domain}
-                  </span>
-                  <span className={`text-[10px] font-mono px-2 py-0.5 rounded uppercase font-semibold border ${
-                    project.status === 'recruiting'
-                      ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
-                      : project.status === 'in_development'
-                      ? 'bg-amber-500/10 text-amber-400 border-amber-500/20'
-                      : 'bg-purple-500/10 text-purple-400 border-purple-500/20'
-                  }`}>
-                    {project.status.replace('_', ' ')}
-                  </span>
+            <article key={p.id} className="card p-5 flex flex-col">
+              <div className="flex justify-between items-center text-[12px] font-bold uppercase tracking-wider">
+                <span className="text-royal">{p.domain}</span>
+                <span className={`px-2 py-0.5 rounded-full ${p.status === 'recruiting' ? 'bg-volt' : 'bg-royal/10'}`}>{STATUS[p.status]}</span>
+              </div>
+              <h2 className="disp font-bold text-[21px] leading-tight mt-3">{p.title}</h2>
+              <p className="text-[14.5px] text-card-ink/70 mt-1.5 flex-1">{p.tagline}</p>
+
+              <div className="mt-5">
+                <div className="text-[12px] font-bold uppercase tracking-wider text-card-ink/60 mb-2">Lineup · {p.members.length} in, {open.length} open</div>
+                <div className="flex flex-wrap gap-2 items-center">
+                  {p.members.map((id) => { const s = students.find((x) => x.id === id); return <span key={id} title={s?.name}><Avatar s={s} size={38} /></span>; })}
+                  {open.map((r) => (
+                    <button key={r.id} onClick={() => draft(p.id, r.id)} title={`Open: ${r.title}`}
+                      className="w-[38px] h-[38px] rounded-full border-2 border-dashed border-royal text-royal grid place-items-center hover:bg-volt hover:border-solid hover:border-royal-ink transition-colors">
+                      <Plus size={16} />
+                    </button>
+                  ))}
                 </div>
-
-                {/* Title & Tagline */}
-                <h3 className="text-base font-bold text-white mt-3 group-hover:text-amber-400 transition-colors">
-                  {project.title}
-                </h3>
-                <p className="text-xs text-slate-400 font-medium mt-1 line-clamp-2">
-                  {project.tagline}
-                </p>
-
-                {/* Open Roles Badges */}
-                <div className="mt-4 pt-3 border-t border-[#232933]">
-                  <div className="flex items-center justify-between text-xs mb-2">
-                    <span className="text-slate-500 font-mono text-[11px]">OPEN ROLES</span>
-                    <span className="font-mono text-amber-400 font-bold text-[11px]">
-                      {openRoles.length} opening{openRoles.length === 1 ? '' : 's'}
-                    </span>
-                  </div>
-
-                  <div className="space-y-1.5">
-                    {project.openRoles.map((role) => (
-                      <div
-                        key={role.id}
-                        className={`text-[11px] p-2 rounded-lg border flex items-center justify-between ${
-                          role.status === 'open'
-                            ? 'bg-amber-950/20 border-amber-900/40 text-amber-200'
-                            : 'bg-slate-900/40 border-slate-800 text-slate-500 line-through'
-                        }`}
-                      >
-                        <span className="font-medium truncate mr-2">{role.title}</span>
-                        <div className="flex items-center space-x-1 flex-shrink-0">
-                          {role.status === 'open' ? (
-                            role.requiredSkills.slice(0, 2).map((req) => (
-                              <span key={req.skill} className="text-[9px] px-1 rounded bg-black/40 text-amber-300 font-mono">
-                                {req.skill}
-                              </span>
-                            ))
-                          ) : (
-                            <span className="text-[10px] text-emerald-400 font-mono">FILLED</span>
-                          )}
-                        </div>
-                      </div>
+                {open.length > 0 && (
+                  <ul className="mt-3 space-y-1">
+                    {open.map((r) => (
+                      <li key={r.id} className="text-[13.5px] flex justify-between gap-2">
+                        <span className="font-semibold">{r.title}</span>
+                        <span className="text-card-ink/60 truncate">{r.requiredSkills.map((s) => s.skill).join(' · ')}</span>
+                      </li>
                     ))}
-                  </div>
-                </div>
-
-                {/* Team Members & Stats */}
-                <div className="mt-4 pt-3 border-t border-[#232933] flex items-center justify-between text-xs">
-                  <div className="flex items-center -space-x-2">
-                    {project.members.slice(0, 4).map((memberId) => {
-                      const m = students.find((s) => s.id === memberId);
-                      return (
-                        <img
-                          key={memberId}
-                          src={m?.avatar}
-                          alt={m?.name}
-                          title={m?.name}
-                          className="w-6 h-6 rounded-full border border-slate-800 object-cover"
-                        />
-                      );
-                    })}
-                    {project.members.length > 4 && (
-                      <div className="w-6 h-6 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center text-[9px] text-slate-400 font-mono">
-                        +{project.members.length - 4}
-                      </div>
-                    )}
-                  </div>
-
-                  <div className="flex items-center space-x-3 text-slate-400 font-mono text-[11px]">
-                    <div className="flex items-center space-x-1">
-                      <Star className="w-3.5 h-3.5 text-amber-400" />
-                      <span>{project.starsCount}</span>
-                    </div>
-                    <div className="flex items-center space-x-1">
-                      <GitFork className="w-3.5 h-3.5" />
-                      <span>{project.forksCount}</span>
-                    </div>
-                  </div>
-                </div>
+                  </ul>
+                )}
               </div>
 
-              {/* Action Buttons */}
-              <div className="mt-5 pt-3 border-t border-[#232933] grid grid-cols-2 gap-2">
-                <button
-                  onClick={() => {
-                    setSelectedProjectId(project.id);
-                    setActiveTab('matching');
-                  }}
-                  className="py-1.5 px-2 rounded-lg bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border border-amber-500/30 text-xs font-medium flex items-center justify-center space-x-1 transition-all"
-                >
-                  <Target className="w-3.5 h-3.5" />
-                  <span>Match Devs</span>
-                </button>
-
-                <button
-                  onClick={() => {
-                    setSelectedProjectId(project.id);
-                    setActiveTab('kanban');
-                  }}
-                  className="py-1.5 px-2 rounded-lg bg-[#1E232B] hover:bg-slate-800 text-slate-200 border border-[#2D3540] text-xs font-medium flex items-center justify-center space-x-1 transition-all"
-                >
-                  <Kanban className="w-3.5 h-3.5" />
-                  <span>Workspace</span>
-                </button>
+              <div className="flex items-center justify-between mt-5 pt-4 border-t-2 border-royal/10">
+                <span className="flex gap-3 text-[13px] text-card-ink/60">
+                  <span className="flex items-center gap-1"><Star size={14} />{p.starsCount}</span>
+                  <span className="flex items-center gap-1"><GitFork size={14} />{p.forksCount}</span>
+                </span>
+                <span className="flex gap-2">
+                  <button className="gbtn gbtn-dark !py-1.5 !px-3 text-[14px]" onClick={() => { setSelectedProjectId(p.id); setActiveTab('kanban'); }}>Board</button>
+                  {open.length > 0 && <button className="vbtn !py-1.5 !px-3 text-[14px] !bg-royal !text-white" onClick={() => draft(p.id, open[0].id)}>Draft</button>}
+                </span>
               </div>
-            </div>
+            </article>
           );
         })}
       </div>
-
-      {/* Propose Project Modal */}
-      {showCreateModal && (
-        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-[#14171D] border border-[#2D3540] rounded-2xl p-6 max-w-lg w-full shadow-2xl">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-base font-bold text-white">Propose Engineering Initiative</h3>
-              <button
-                onClick={() => setShowCreateModal(false)}
-                className="text-slate-400 hover:text-white text-lg p-1"
-              >
-                ✕
-              </button>
-            </div>
-
-            <form onSubmit={handleCreateProject} className="space-y-3.5 text-xs">
-              <div>
-                <label className="block text-slate-400 mb-1">Project Name</label>
-                <input
-                  type="text"
-                  required
-                  placeholder="e.g. HyperLogLog Rust Engine"
-                  value={newTitle}
-                  onChange={(e) => setNewTitle(e.target.value)}
-                  className="w-full px-3 py-2 bg-[#0D0F12] border border-[#232933] rounded-xl text-white focus:outline-none focus:border-amber-500"
-                />
-              </div>
-
-              <div>
-                <label className="block text-slate-400 mb-1">Tagline</label>
-                <input
-                  type="text"
-                  required
-                  placeholder="e.g. Cardinality estimation for distributed streaming"
-                  value={newTagline}
-                  onChange={(e) => setNewTagline(e.target.value)}
-                  className="w-full px-3 py-2 bg-[#0D0F12] border border-[#232933] rounded-xl text-white focus:outline-none focus:border-amber-500"
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-slate-400 mb-1">Engineering Domain</label>
-                  <select
-                    value={newDomain}
-                    onChange={(e) => setNewDomain(e.target.value as ProjectDomain)}
-                    className="w-full px-2 py-2 bg-[#0D0F12] border border-[#232933] rounded-xl text-white focus:outline-none"
-                  >
-                    {DOMAINS.filter((d) => d !== 'all').map((d) => (
-                      <option key={d} value={d}>{d}</option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-slate-400 mb-1">Initial Open Role</label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="e.g. SIMD Rust Developer"
-                    value={newRoleTitle}
-                    onChange={(e) => setNewRoleTitle(e.target.value)}
-                    className="w-full px-3 py-2 bg-[#0D0F12] border border-[#232933] rounded-xl text-white focus:outline-none"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-slate-400 mb-1">Required Skills (Skill:MinLevel, ...)</label>
-                <input
-                  type="text"
-                  placeholder="Rust:4, C/C++:3, WebAssembly:3"
-                  value={newRoleSkills}
-                  onChange={(e) => setNewRoleSkills(e.target.value)}
-                  className="w-full px-3 py-2 bg-[#0D0F12] border border-[#232933] rounded-xl text-white font-mono focus:outline-none focus:border-amber-500"
-                />
-              </div>
-
-              <div className="flex items-center justify-end space-x-2 pt-4">
-                <button
-                  type="button"
-                  onClick={() => setShowCreateModal(false)}
-                  className="px-3 py-2 text-slate-400 hover:text-white"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="px-4 py-2 rounded-xl bg-amber-600 hover:bg-amber-500 text-white font-medium shadow-md shadow-amber-600/30"
-                >
-                  Publish Initiative
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
     </div>
   );
 };

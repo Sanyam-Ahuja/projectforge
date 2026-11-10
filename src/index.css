@@ -1,59 +1,46 @@
 @import "tailwindcss";
 
+/* ProjectForge — draft night. The whole room is royal blue; students are player cards,
+   projects are teams with open slots, the matcher is the draft board. Yellow means "act". */
+@theme {
+  --color-royal: #1530b8;
+  --color-royal-deep: #0c1d7d;
+  --color-royal-ink: #08135a;
+  --color-royal-line: #3550d6;
+  --color-volt: #ffd60a;
+  --color-chalk: #ffffff;
+  --color-mist: #c9d3ff;
+  --color-hit: #2ee59d;
+  --color-miss: #ff5d73;
+  --color-card-ink: #0b1340;
+  --font-display: "Unbounded", system-ui, sans-serif;
+  --font-sans: "Figtree", system-ui, sans-serif;
+}
+
 @layer base {
-  :root {
-    --forge-bg: #12100e;
-    --forge-card: #191613;
-    --forge-border: #2c231c;
-    --forge-copper: #ea580c;
-    --forge-bronze: #d97706;
-  }
-
-  body {
-    background-color: #12100e;
-    background-image: 
-      radial-gradient(circle at 50% 0%, rgba(234, 88, 12, 0.08) 0%, transparent 60%),
-      radial-gradient(rgba(234, 88, 12, 0.02) 1px, transparent 1px);
-    background-size: 100% 100%, 28px 28px;
-    color: #ede8e3;
-    font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
-  }
-
-  code, pre, .font-mono {
-    font-family: 'JetBrains Mono', monospace;
-  }
+  body { background: var(--color-royal); color: var(--color-chalk); font-family: var(--font-sans); font-size: 15px; -webkit-font-smoothing: antialiased; font-variant-numeric: tabular-nums; }
+  ::selection { background: var(--color-volt); color: var(--color-royal-ink); }
+  :focus-visible { outline: 3px solid var(--color-volt); outline-offset: 2px; }
+  input, select, textarea, button { font: inherit; }
 }
 
-.forge-card {
-  background-color: #191613;
-  border: 1px solid #2d231b;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+@layer components {
+  .disp { font-family: var(--font-display); letter-spacing: -0.02em; }
+  .card { background: var(--color-chalk); color: var(--color-card-ink); border-radius: 14px; }
+  .panel { background: var(--color-royal-deep); border-radius: 16px; }
+  .vbtn { display: inline-flex; align-items: center; justify-content: center; gap: 0.45rem; background: var(--color-volt); color: var(--color-royal-ink); font-weight: 800; padding: 0.6rem 1.1rem; border-radius: 999px; transition: transform 140ms, box-shadow 140ms; }
+  .vbtn:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 8px 18px -8px rgba(255,214,10,.8); }
+  .vbtn:disabled { opacity: 0.45; cursor: not-allowed; }
+  .gbtn { display: inline-flex; align-items: center; justify-content: center; gap: 0.45rem; border: 2px solid rgba(255,255,255,.35); color: #fff; font-weight: 700; padding: 0.5rem 1rem; border-radius: 999px; }
+  .gbtn:hover { border-color: var(--color-volt); color: var(--color-volt); }
+  .gbtn-dark { border-color: rgba(11,19,64,.25); color: var(--color-card-ink); }
+  .gbtn-dark:hover { border-color: var(--color-royal); color: var(--color-royal); }
+  .inp { width: 100%; background: var(--color-royal-ink); border: 2px solid var(--color-royal-line); color: #fff; border-radius: 10px; padding: 0.55rem 0.8rem; }
+  .inp:focus { outline: none; border-color: var(--color-volt); }
+  .inp::placeholder { color: #8b9ae6; }
+  .lbl { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--color-mist); }
 }
 
-.forge-card-molten {
-  border-top: 2px solid #ea580c;
-}
-
-.forge-card:hover {
-  border-color: rgba(234, 88, 12, 0.4);
-}
-
-.forge-glow {
-  box-shadow: 0 0 16px rgba(234, 88, 12, 0.25);
-}
-
-/* Custom scrollbars */
-::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
-}
-::-webkit-scrollbar-track {
-  background: #12100e;
-}
-::-webkit-scrollbar-thumb {
-  background: #2d231b;
-  border-radius: 3px;
-}
-::-webkit-scrollbar-thumb:hover {
-  background: #ea580c;
-}
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { background: var(--color-royal-deep); }
+::-webkit-scrollbar-thumb { background: var(--color-royal-line); border-radius: 10px; }
